@@ -7,6 +7,7 @@ export class WrongRoomUrlFormat extends Error {
         public url: string
     ) {
         super();
+        this.message = `输入的直播间URL格式不正确:${this.url}`
     }
 }
 
@@ -21,6 +22,11 @@ export class UnexpectedResponse extends Error {
         public content?: string
     ) {
         super();
+        if (this.content) {
+            this.message = `对${this.url}网络请求的数据与预期不符:${this.content}`;
+        } else {
+            this.message = `对${this.url}网络请求的数据与预期不符`;
+        }
     }
 }
 
