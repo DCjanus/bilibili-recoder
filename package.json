@@ -9,6 +9,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/node": "^8.0.16",
+    "@types/request": "^2.0.0",
     "@types/request-promise-native": "^1.0.6",
     "typescript": "^2.4.2"
   },
