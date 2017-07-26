@@ -1,5 +1,5 @@
 import * as request from 'request-promise-native';
-import { UnexpectedResponse, WrongRoomUrlFormat } from "./exceptions";
+import { UnexpectedResponse, WrongRoomUrlFormat } from './exceptions';
 
 export class LiveRoomModel {
     /**
@@ -9,6 +9,7 @@ export class LiveRoomModel {
      * @param room_title            直播间标题
      * @param author_nick_name      主播昵称
      * @param video_stream_url      视频流URL
+     * @param is_living             正在直播与否
      */
     private constructor(
         readonly room_id         : number,
@@ -16,6 +17,7 @@ export class LiveRoomModel {
         readonly room_title      : string,
         readonly author_nick_name: string,
         readonly video_stream_url: string,
+        public   is_living       : boolean
     ) { }
 
     /**
@@ -26,17 +28,25 @@ export class LiveRoomModel {
      */
     static async new(live_room_url: string): Promise<LiveRoomModel> {
 
-        const room_url                         = parse_room_url(live_room_url);
-        const room_id                          = await query_room_id(room_url);
-        const video_stream_url                 = await query_video_stream_url(room_id);
-        const { author_nick_name, room_title } = await query_room_info(room_id);
+        const room_url                                    = parse_room_url(live_room_url);
+        const room_id                                     = await query_room_id(room_url);
+        const video_stream_url                            = await query_video_stream_url(room_id);
+        const { author_nick_name, room_title, is_living } = await query_room_info(room_id);
 
         return new LiveRoomModel(
             room_id,
             room_url,
             room_title,
             author_nick_name,
-            video_stream_url);
+            video_stream_url,
+            is_living);
+    }
+
+    /**
+     * 重新获取并刷新直播状态
+     */
+    async refresh_live_state() {
+        this.is_living = (await query_room_info(this.room_id)).is_living;
     }
 }
 
@@ -62,11 +72,11 @@ async function query_room_id(room_url: string): Promise<number> {
 async function query_room_info(room_id: number) {
     const url = `http://api.live.bilibili.com/room/v1/Room/getRoomInfoMain?roomid=${room_id}`;
 
-    const response                                        = await request.get(url, { json: true });
-    const { code, data: { ANCHOR_NICK_NAME, ROOMTITLE } } = response;
+    const response                                                     = await request.get(url, { json: true });
+    const { code, data: { ANCHOR_NICK_NAME, ROOMTITLE, LIVE_STATUS } } = response;
     if (code !== 0) throw new UnexpectedResponse(url, response);
 
-    return { author_nick_name: ANCHOR_NICK_NAME, room_title: ROOMTITLE };
+    return { author_nick_name: ANCHOR_NICK_NAME, room_title: ROOMTITLE, is_living: LIVE_STATUS === 'LIVE' };
 }
 
 /**
